@@ -6,7 +6,7 @@ resources:
 images:
   - name: fastapi-app
     newName: docker.io/jaga9989/simple-python-app
-    newTag: placeholder
+    newTag: 1a926625198772daee65dd809d4680a906601461
 replicas:
   - name: fastapi-app
     count: 1
