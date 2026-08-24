@@ -23,10 +23,17 @@ is **validate-only** — merging to `main` is the deploy trigger; ArgoCD's own
 
 ## Promotion model
 
-- **dev** — `automated.prune/selfHeal: true`. Deploys as soon as
-  `app_repository`'s CI opens and merges an image-bump PR.
-- **staging** — same auto-sync, promoted by hand-editing/PR-ing the staging
-  overlay's `newTag` once dev is verified.
+- **dev** — fully automated, no developer click required. `app_repository`'s
+  CI opens the image-bump PR and immediately enables GitHub's native
+  auto-merge on it; the PR still has to pass this repo's `validate.yml`
+  checks before auto-merge actually lands it, and `automated.prune/selfHeal`
+  then has ArgoCD deploy it. Requires "Allow auto-merge" enabled in this
+  repo's Settings > General, and `validate.yml`'s jobs set as required
+  status checks on `main` (Settings > Branches) — otherwise auto-merge won't
+  wait for them.
+- **staging** — same auto-sync, but promotion is a deliberate hand-edited/PR'd
+  bump of the staging overlay's `newTag` (not auto-merged) once dev is
+  verified — this is the first human checkpoint.
 - **prod** — no `automated:` block by design. Promotion is a deliberate
   `argocd app sync fastapi-app-prod` (or UI click) after review. The
   `CODEOWNERS` file requires sign-off on any change under

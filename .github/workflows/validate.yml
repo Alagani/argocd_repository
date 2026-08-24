@@ -37,3 +37,4 @@ jobs:
         with:
           yamllint_strict: false
           yamllint_comment: false
+          yamllint_config_filepath: .yamllint
