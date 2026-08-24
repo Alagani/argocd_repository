@@ -11,9 +11,13 @@ spec:
     path: apps/fastapi-app/overlays/prod
   destination:
     server: https://kubernetes.default.svc
-    namespace: fastapi-app-prod
+    namespace: demo
   syncPolicy:
-    # No automated block: prod promotion is a manual "argocd app sync" (or a
-    # reviewed PR merge plus a manual click) — never auto-applied on merge.
+    # Single fully-automated environment — CI opens the image-bump PR and
+    # auto-merges it (see app_repository's ci.yml), and ArgoCD auto-syncs
+    # the result. No developer click anywhere in the path.
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true

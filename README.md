@@ -8,36 +8,37 @@ cluster — no CI job in this repo (or in `app_repository`) ever runs
 ## Layout
 
 - `apps/fastapi-app/base` — Kustomize base (Deployment, Service).
-- `apps/fastapi-app/overlays/{dev,staging,prod}` — per-environment image tag,
+- `apps/fastapi-app/overlays/prod` — the single environment: image tag,
   replica count, resource patches.
-- `argocd/applications/*.yaml` — one ArgoCD `Application` per environment.
+- `argocd/applications/fastapi-app-prod.yaml` — the one ArgoCD `Application`.
 - `argocd/app-of-apps.yaml` — root Application that syncs everything under
   `argocd/applications/` (apply this once, manually, to bootstrap).
 
 ## Pipeline (`.github/workflows/validate.yml`)
 
-On every PR: `kustomize build` each overlay and validate the rendered
+On every PR: `kustomize build` the prod overlay and validate the rendered
 manifests against Kubernetes schemas (`kubeconform`), plus `yamllint`. This
 is **validate-only** — merging to `main` is the deploy trigger; ArgoCD's own
-`selfHeal`/`automated` sync policy (per-`Application`) does the rest.
+`selfHeal`/`automated` sync policy does the rest.
 
-## Promotion model
+## Deployment model
 
-- **dev** — fully automated, no developer click required. `app_repository`'s
-  CI opens the image-bump PR and immediately enables GitHub's native
-  auto-merge on it; the PR still has to pass this repo's `validate.yml`
-  checks before auto-merge actually lands it, and `automated.prune/selfHeal`
-  then has ArgoCD deploy it. Requires "Allow auto-merge" enabled in this
-  repo's Settings > General, and `validate.yml`'s jobs set as required
-  status checks on `main` (Settings > Branches) — otherwise auto-merge won't
-  wait for them.
-- **staging** — same auto-sync, but promotion is a deliberate hand-edited/PR'd
-  bump of the staging overlay's `newTag` (not auto-merged) once dev is
-  verified — this is the first human checkpoint.
-- **prod** — no `automated:` block by design. Promotion is a deliberate
-  `argocd app sync fastapi-app-prod` (or UI click) after review. The
-  `CODEOWNERS` file requires sign-off on any change under
-  `overlays/prod/` or `fastapi-app-prod.yaml`.
+Single environment (`prod`), fully automated end-to-end — no developer click
+anywhere in the path:
+
+1. `app_repository`'s CI builds, scans, and pushes the image, then opens an
+   image-bump PR here and immediately enables GitHub's native auto-merge on
+   it.
+2. Auto-merge waits for this repo's `validate.yml` checks to pass, then
+   merges the PR itself.
+3. `fastapi-app-prod`'s `automated.prune/selfHeal: true` has ArgoCD pick up
+   the merge and sync the cluster.
+
+Requires "Allow auto-merge" enabled in this repo's Settings > General, and
+`validate.yml`'s jobs set as required status checks on `main` (Settings >
+Branches) — otherwise auto-merge won't wait for them. There is deliberately
+no CODEOWNERS/manual-review gate — every merge to `main` here reaches the
+cluster automatically.
 
 ## Local cluster (kind)
 
@@ -56,7 +57,7 @@ local dev tooling only, separate from the actual GitOps content above.
 
 - `local/teardown.sh` — deletes the kind cluster.
 
-After bootstrap, dev/staging/prod `Application`s are managed by ArgoCD
+After bootstrap, the `fastapi-app-prod` `Application` is managed by ArgoCD
 itself via the app-of-apps pattern — re-running `bootstrap.sh` is only for
 rebuilding the cluster from scratch, never for deploying app changes.
 
