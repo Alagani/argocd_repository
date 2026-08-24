@@ -1,0 +1,39 @@
+name: Validate manifests
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        overlay: [dev, staging, prod]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kustomize
+        run: |
+          curl -sSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz" | tar xz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Build overlay
+        run: kustomize build apps/fastapi-app/overlays/${{ matrix.overlay }} > /tmp/${{ matrix.overlay }}.yaml
+
+      - name: Validate against Kubernetes schemas
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          args: -strict -summary /tmp/${{ matrix.overlay }}.yaml
+
+  lint-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: karancode/yamllint-github-action@master
+        with:
+          yamllint_strict: false
+          yamllint_comment: false
