@@ -1,6 +1,6 @@
-# argocd_respository
+# argocd_repository
 
-Source of truth for what's deployed. GitHub repo: `Alagani/argocd_respository`.
+Source of truth for what's deployed. GitHub repo: `Alagani/argocd_repository`.
 App repo: `Alagani/app_repository`. ArgoCD polls this repo and reconciles the
 cluster — no CI job in this repo (or in `app_repository`) ever runs
 `kubectl apply`.
@@ -41,7 +41,7 @@ local dev tooling only, separate from the actual GitOps content above.
   named `argocd-demo`.
 - `local/bootstrap.sh` — creates the cluster, installs ArgoCD from its
   official manifests, and applies `argocd/app-of-apps.yaml` once. Run it
-  from `argocd_respository/local`:
+  from `argocd_repository/local`:
 
   ```
   ./bootstrap.sh
@@ -54,6 +54,6 @@ itself via the app-of-apps pattern — re-running `bootstrap.sh` is only for
 rebuilding the cluster from scratch, never for deploying app changes.
 
 `kind`'s nodes run in Docker and pull images over the network like any other
-node, so `ghcr.io/alagani/fastapi-app` must be reachable — either make the GHCR
-package public, or create an `imagePullSecret` as described in
-`bootstrap.sh` before the dev `Application` first syncs.
+node, so `docker.io/jaga9989/simple-python-app` must be reachable. If the
+Docker Hub repo is public, no `imagePullSecret` is needed; if it's private,
+create one first — see the command in `bootstrap.sh`.

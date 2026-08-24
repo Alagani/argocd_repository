@@ -11,11 +11,11 @@ kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
-# GHCR packages are private by default. Either make ghcr.io/alagani/fastapi-app
-# public, or create this pull secret before ArgoCD syncs the app:
-#   kubectl create secret docker-registry ghcr-pull-secret \
-#     --namespace demo --docker-server=ghcr.io \
-#     --docker-username="$GHCR_USERNAME" --docker-password="$GHCR_TOKEN"
+# docker.io/jaga9989/simple-python-app is a public Docker Hub repo, so no
+# imagePullSecret is needed. If it's ever made private, create one first:
+#   kubectl create secret docker-registry dockerhub-pull-secret \
+#     --namespace demo --docker-server=https://index.docker.io/v1/ \
+#     --docker-username="$DOCKERHUB_USERNAME" --docker-password="$DOCKERHUB_TOKEN"
 # (values come from your own shell env — never hardcode them here or in git)
 
 kubectl apply -f ../argocd/app-of-apps.yaml

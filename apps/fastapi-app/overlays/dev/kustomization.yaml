@@ -5,7 +5,7 @@ resources:
   - ../../base
 images:
   - name: fastapi-app
-    newName: ghcr.io/alagani/fastapi-app
+    newName: docker.io/jaga9989/simple-python-app
     newTag: placeholder
 replicas:
   - name: fastapi-app
