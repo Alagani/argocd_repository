@@ -5,7 +5,7 @@ resources:
   - ../../base
 images:
   - name: fastapi-app
-    newName: ghcr.io/OWNER/fastapi-app
+    newName: ghcr.io/alagani/fastapi-app
     newTag: placeholder
 replicas:
   - name: fastapi-app

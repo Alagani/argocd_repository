@@ -1,4 +1,4 @@
 # Prod changes require an explicit human sign-off, even though CI only
 # validates (never applies) manifests.
-/apps/fastapi-app/overlays/prod/  @OWNER
-/argocd/applications/fastapi-app-prod.yaml  @OWNER
+/apps/fastapi-app/overlays/prod/  @Alagani
+/argocd/applications/fastapi-app-prod.yaml  @Alagani

@@ -1,7 +1,8 @@
-# gitops-argocd
+# argocd_respository
 
-Source of truth for what's deployed. ArgoCD polls this repo and reconciles
-the cluster — no CI job in this repo (or in `fastapi-app`) ever runs
+Source of truth for what's deployed. GitHub repo: `Alagani/argocd_respository`.
+App repo: `Alagani/app_repository`. ArgoCD polls this repo and reconciles the
+cluster — no CI job in this repo (or in `app_repository`) ever runs
 `kubectl apply`.
 
 ## Layout
@@ -23,7 +24,7 @@ is **validate-only** — merging to `main` is the deploy trigger; ArgoCD's own
 ## Promotion model
 
 - **dev** — `automated.prune/selfHeal: true`. Deploys as soon as
-  `fastapi-app`'s CI opens and merges an image-bump PR.
+  `app_repository`'s CI opens and merges an image-bump PR.
 - **staging** — same auto-sync, promoted by hand-editing/PR-ing the staging
   overlay's `newTag` once dev is verified.
 - **prod** — no `automated:` block by design. Promotion is a deliberate
@@ -31,11 +32,28 @@ is **validate-only** — merging to `main` is the deploy trigger; ArgoCD's own
   `CODEOWNERS` file requires sign-off on any change under
   `overlays/prod/` or `fastapi-app-prod.yaml`.
 
-## Bootstrap (once, against your kind cluster)
+## Local cluster (kind)
 
-```
-kubectl apply -f argocd/app-of-apps.yaml
-```
+`local/` holds everything needed to stand up the demo cluster — this is
+local dev tooling only, separate from the actual GitOps content above.
 
-Everything else — dev/staging/prod Applications — is then managed by ArgoCD
-itself via the app-of-apps pattern.
+- `local/kind-config.yaml` — single control-plane + worker `kind` cluster
+  named `argocd-demo`.
+- `local/bootstrap.sh` — creates the cluster, installs ArgoCD from its
+  official manifests, and applies `argocd/app-of-apps.yaml` once. Run it
+  from `argocd_respository/local`:
+
+  ```
+  ./bootstrap.sh
+  ```
+
+- `local/teardown.sh` — deletes the kind cluster.
+
+After bootstrap, dev/staging/prod `Application`s are managed by ArgoCD
+itself via the app-of-apps pattern — re-running `bootstrap.sh` is only for
+rebuilding the cluster from scratch, never for deploying app changes.
+
+`kind`'s nodes run in Docker and pull images over the network like any other
+node, so `ghcr.io/alagani/fastapi-app` must be reachable — either make the GHCR
+package public, or create an `imagePullSecret` as described in
+`bootstrap.sh` before the dev `Application` first syncs.

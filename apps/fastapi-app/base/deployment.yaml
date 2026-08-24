@@ -21,7 +21,7 @@ spec:
       containers:
         - name: fastapi-app
           # newTag is set per-overlay via kustomize images: — never "latest".
-          image: ghcr.io/OWNER/fastapi-app:placeholder
+          image: ghcr.io/alagani/fastapi-app:placeholder
           ports:
             - containerPort: 8000
               name: http

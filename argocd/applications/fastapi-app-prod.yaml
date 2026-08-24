@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/OWNER/gitops-argocd.git
+    repoURL: https://github.com/Alagani/argocd_respository.git
     targetRevision: main
     path: apps/fastapi-app/overlays/prod
   destination:
