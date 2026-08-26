@@ -46,7 +46,7 @@ extraPortMappings — no port-forward needed:
   https://localhost:8443        -> ArgoCD UI (user: admin, password: see below)
   http://localhost:8080/healthz -> fastapi-app (once ArgoCD has synced it)
 
-  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+  kubectl -n argocd get secret argocd-initial-admin-secret -o go-template="{{.data.password | base64decode}}"
 
 (kubectl port-forward still works as a fallback if you change the
 NodePort/extraPortMappings pairing later:

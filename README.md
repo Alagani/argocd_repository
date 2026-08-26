@@ -85,7 +85,7 @@ managing `overlays/prod` for real, pulling from Docker Hub.
 ```
 https://localhost:8443        -> ArgoCD UI (user: admin)
 http://localhost:8080/healthz -> fastapi-app (once ArgoCD has synced it)
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+kubectl -n argocd get secret argocd-initial-admin-secret -o go-template="{{.data.password | base64decode}}"
 ```
 
 `teardown.sh` deletes the kind cluster (ArgoCD and the app go with it —
