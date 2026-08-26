@@ -4,17 +4,17 @@ namespace: demo
 resources:
   - ../../base
 images:
+  # Docker Hub repo, created manually (no IaC — see repo README). Unlike
+  # ECR, Docker Hub has no image_tag_mutability=IMMUTABLE enforcement, so
+  # newTag being a unique value every deploy (git sha) is a convention, not
+  # a guarantee — never reuse a tag by hand.
+  # newTag is bumped automatically by app_repository's CI (update-gitops
+  # job), which opens and auto-merges a PR here after each image push —
+  # see that repo's README. Everything after the merge (detecting the
+  # change, applying it, keeping it applied) is ArgoCD.
   - name: fastapi-app
     newName: docker.io/jaga9989/simple-python-app
-    newTag: placeholder
+    newTag: latest
 replicas:
   - name: fastapi-app
-    count: 3
-patches:
-  - target:
-      kind: Deployment
-      name: fastapi-app
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/resources/limits/memory
-        value: 256Mi
+    count: 2

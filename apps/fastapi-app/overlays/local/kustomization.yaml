@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Local-only overlay for the kind cluster in ../../../local. Deliberately
+# NOT wired into argocd/application.yaml — prod (Docker Hub/k3s) is the
+# only ArgoCD-managed environment (see repo README). This overlay is
+# applied directly with `kubectl apply -k` by local/bootstrap.sh, against
+# an image built and `kind load`-ed locally, so kind's nodes never need
+# registry credentials.
+namespace: demo
+resources:
+  - ../../base
+images:
+  - name: fastapi-app
+    newName: fastapi-app
+    newTag: local
+replicas:
+  - name: fastapi-app
+    count: 1
+patches:
+  - target:
+      kind: Deployment
+      name: fastapi-app
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never

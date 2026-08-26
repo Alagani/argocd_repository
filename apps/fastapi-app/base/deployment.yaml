@@ -20,8 +20,11 @@ spec:
           type: RuntimeDefault
       containers:
         - name: fastapi-app
-          # newTag is set per-overlay via kustomize images: — never "latest".
-          image: docker.io/jaga9989/simple-python-app:placeholder
+          # Symbolic placeholder — kustomize's `images` transformer matches
+          # on this exact name (see overlays/*/kustomization.yaml `images:`),
+          # then rewrites both registry (newName) and tag (newTag) per
+          # overlay. Never resolves to "latest" in any overlay.
+          image: fastapi-app:placeholder
           ports:
             - containerPort: 8000
               name: http

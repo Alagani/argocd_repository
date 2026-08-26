@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        overlay: [prod]
+        overlay: [prod, local]
     steps:
       - uses: actions/checkout@v4
 
@@ -22,12 +22,12 @@ jobs:
           sudo mv kustomize /usr/local/bin/
 
       - name: Build overlay
-        run: kustomize build apps/fastapi-app/overlays/${{ matrix.overlay }} > /tmp/${{ matrix.overlay }}.yaml
+        run: kustomize build apps/fastapi-app/overlays/${{ matrix.overlay }} > rendered-${{ matrix.overlay }}.yaml
 
       - name: Validate against Kubernetes schemas
         uses: docker://ghcr.io/yannh/kubeconform:latest
         with:
-          args: -strict -summary /tmp/${{ matrix.overlay }}.yaml
+          args: -strict -summary rendered-${{ matrix.overlay }}.yaml
 
   lint-yaml:
     runs-on: ubuntu-latest

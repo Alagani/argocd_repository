@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: fastapi-app-prod
+  name: fastapi-app
   namespace: argocd
 spec:
   project: default
@@ -13,9 +13,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: demo
   syncPolicy:
-    # Single fully-automated environment — CI opens the image-bump PR and
-    # auto-merges it (see app_repository's ci.yml), and ArgoCD auto-syncs
-    # the result. No developer click anywhere in the path.
+    # The two things worth pointing at for the demo:
+    #   selfHeal: true  -> `kubectl edit`/`scale` the live Deployment and
+    #                       watch ArgoCD revert it back to what's in git.
+    #   prune: true     -> delete a resource from git and watch ArgoCD
+    #                       delete it from the cluster too.
     automated:
       prune: true
       selfHeal: true
