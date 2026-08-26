@@ -7,30 +7,34 @@ pushes the image; see its README).
 ArgoCD polls this repo and reconciles the cluster. No CI job in either repo
 ever runs `kubectl apply` — that's the whole point.
 
-Deploy target: a self-hosted **k3s** cluster, image registry: **Docker
-Hub** (`<dockerhub-username>/myapp-repo`). Both are created **manually —
-no Terraform/OpenTofu** provisions anything here.
+Cluster: a **kind** cluster on your own machine (`./bootstrap.sh`) — no VM,
+no server to provision. Image registry: **Docker Hub**
+(`<dockerhub-username>/myapp-repo`), created **manually — no
+Terraform/OpenTofu**. There's a single environment (`prod`); it's real in
+every way that matters for this demo (ArgoCD actually manages it, the
+image is actually pulled from Docker Hub) — the only thing "local" about
+it is that the cluster happens to run on your laptop instead of a rented
+server. ArgoCD only needs outbound access to GitHub and Docker Hub to make
+that work; nothing needs to be reachable from the internet.
 
 ## Layout
 
 - `apps/fastapi-app/base` — Kustomize base (Deployment, Service). The
   container image is a symbolic placeholder (`fastapi-app:placeholder`);
-  every overlay's `images:` block rewrites both registry and tag.
-- `apps/fastapi-app/overlays/prod` — the one ArgoCD-managed environment, on
-  k3s: Docker Hub image, replica count.
-- `apps/fastapi-app/overlays/local` — kind-only, applied directly by
-  `local/bootstrap.sh` via `kubectl apply -k` (not ArgoCD-managed). Points
-  at a locally built+loaded image so kind's nodes never need registry
-  credentials at all.
+  the `prod` overlay's `images:` block rewrites both registry and tag.
+- `apps/fastapi-app/overlays/prod` — the one environment: Docker Hub
+  image, replica count, NodePort Service.
 - `argocd/application.yaml` — the one ArgoCD `Application`, pointed at
   `overlays/prod`, with `automated: {prune: true, selfHeal: true}`.
+- `kind-config.yaml`, `bootstrap.sh`, `teardown.sh` — stand the cluster up
+  and down.
 
 ## Pipeline (`.github/workflows/validate.yml`)
 
-On every PR: `kustomize build` both overlays and validate the rendered
-manifests against Kubernetes schemas (`kubeconform`), plus `yamllint`.
-Validate-only — it never deploys anything. Deploying is: merge to `main`,
-ArgoCD notices, ArgoCD syncs.
+On every PR: `kustomize build` the `prod` overlay and validate the
+rendered manifests against Kubernetes schemas (`kubeconform`), plus
+`yamllint`. Validate-only — it never deploys anything. Deploying is: merge
+to `main`, ArgoCD notices, ArgoCD syncs.
 
 ## Deployment model
 
@@ -55,66 +59,43 @@ CI side of this.
 
 ## Manual setup (no IaC)
 
-Create these once, by hand, before `remote/bootstrap.sh` will work:
+Create these once, by hand:
 
-1. A server (VM or bare metal) with [k3s](https://k3s.io) installed
-   (`curl -sfL https://get.k3s.io | sh -`).
-2. A kubeconfig on your machine pointed at it — copy
-   `/etc/rancher/k3s/k3s.yaml` from the server and fix its `server:` field
-   to the server's reachable IP/hostname, then `export KUBECONFIG=...` (or
-   merge it into `~/.kube/config`).
-3. The `myapp-repo` Docker Hub repository (already created) and the access
+1. The `myapp-repo` Docker Hub repository (already created) and the access
    token that pushes to it (see `app_repository`'s README).
-4. If that Docker Hub repo is **private**: a `docker-registry` Secret in
+2. If that Docker Hub repo is **private**: a `docker-registry` Secret in
    the `demo` namespace, referenced from the Deployment's
-   `imagePullSecrets` (not needed for a public repo — k3s pulls those
-   anonymously).
+   `imagePullSecrets` (not needed for a public repo — kind's nodes pull
+   those anonymously, same as any cluster would).
+3. `kind` and `docker` installed locally.
 
-OPEN QUESTIONs before this touches anything shared: who owns/pays for the
-server, and whether the Docker Hub repo should be public or private.
-**CTO sign-off** applies before a shared/production apply.
+No server to provision, no `KUBECONFIG` to copy from anywhere — `kind
+create cluster` sets up kubectl access to itself automatically.
 
-## Remote cluster (the real thing: k3s)
-
-```
-./remote/bootstrap.sh
-```
-
-Assumes `kubectl` already points at the k3s cluster (see manual setup
-above), installs ArgoCD, and applies `argocd/application.yaml`.
-`remote/teardown.sh` removes ArgoCD from the cluster only — the k3s
-cluster/nodes and Docker Hub repo themselves are torn down manually, the
-same way they were created.
-
-## Local cluster (kind) — dev-only smoke test, not ArgoCD-managed
-
-`local/` stands up a throwaway cluster to demo ArgoCD itself without any
-external dependency:
+## Bootstrap
 
 ```
-cd local
 ./bootstrap.sh
 ```
 
-This creates a `kind` cluster, installs ArgoCD (for demoing the tool/UI
-only — it's not pointed at `argocd/application.yaml`; the point of this
-overlay is to skip the registry round trip entirely), builds the app
-image from a sibling `app_repository` checkout, `kind load`s it in (no
-registry, no credentials needed), and applies
-`apps/fastapi-app/overlays/local` directly with `kubectl apply -k`.
+Creates the kind cluster, installs ArgoCD (NodePort'd for direct UI
+access), and applies `argocd/application.yaml` — from there ArgoCD is
+managing `overlays/prod` for real, pulling from Docker Hub.
 
 ```
-kubectl -n argocd port-forward svc/argocd-server 8081:443
+https://localhost:8443        -> ArgoCD UI (user: admin)
+http://localhost:8080/healthz -> fastapi-app (once ArgoCD has synced it)
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
-kubectl -n demo port-forward svc/fastapi-app 8000:80
 ```
 
-`local/teardown.sh` deletes the kind cluster.
+`teardown.sh` deletes the kind cluster (ArgoCD and the app go with it —
+there's no separate persistent infra to preserve, unlike a real server).
+
+fastapi-app won't go healthy until `overlays/prod/kustomization.yaml`'s
+`images.newName`/`newTag` point at an image that actually exists on
+Docker Hub — see "What to actually try" below for triggering that.
 
 ## What to actually try, to see ArgoCD do something
-
-Run these against the real k3s cluster (`remote/bootstrap.sh`) — that's
-the one ArgoCD is actually managing:
 
 1. **Self-heal** — `kubectl -n demo scale deployment/fastapi-app --replicas=5`,
    then watch ArgoCD notice the live state has drifted from git and scale

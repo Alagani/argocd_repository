@@ -13,14 +13,15 @@ images:
   # see that repo's README. Everything after the merge (detecting the
   # change, applying it, keeping it applied) is ArgoCD.
   - name: fastapi-app
-    newName: docker.io/jaga9989/simple-python-app
+    newName: docker.io/jaga9989/myapp-repo
     newTag: b4e5a33c0457ac837167d779a0617d4c378b2a8f
 replicas:
   - name: fastapi-app
     count: 2
 patches:
-  # NodePort so the app is reachable at <k3s-server-ip>:30080 without a
-  # LoadBalancer/Ingress controller (none provisioned in this demo).
+  # NodePort so the app is reachable at localhost:30080 (kind-config.yaml
+  # maps that to localhost:8080) without a LoadBalancer/Ingress controller
+  # (none provisioned in this demo).
   - target:
       kind: Service
       name: fastapi-app

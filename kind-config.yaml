@@ -4,12 +4,12 @@ name: argocd-demo
 nodes:
   - role: control-plane
     extraPortMappings:
-      # fastapi-app NodePort (overlays/local's Service patch pins nodePort: 30080)
+      # fastapi-app NodePort (overlays/prod's Service patch pins nodePort: 30080)
       - containerPort: 30080
         hostPort: 8080
         protocol: TCP
-      # argocd-server NodePort, https port (local/bootstrap.sh patches this
-      # in after install; argocd-server serves both plaintext-detecting-TLS
+      # argocd-server NodePort, https port (bootstrap.sh patches this in
+      # after install; argocd-server serves both plaintext-detecting-TLS
       # on the same containerPort 8080 internally)
       - containerPort: 30443
         hostPort: 8443
