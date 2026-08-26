@@ -1,0 +1,33 @@
+# NOT wired into local/bootstrap.sh — that script deliberately deploys
+# overlays/local directly with `kubectl apply -k`, no ArgoCD, no registry
+# round trip (see repo README). This Application is an optional extra:
+# apply it by hand on a kind cluster that's already run bootstrap.sh (so
+# fastapi-app:local is already loaded into the nodes) if you want to see
+# ArgoCD actually sync/self-heal/prune something without touching Docker
+# Hub or a real k3s cluster.
+#
+#   kubectl apply -f argocd/application-local.yaml
+#
+# It targets the same namespace/resources bootstrap.sh already applied
+# directly — ArgoCD will just adopt them on first sync, no conflict, since
+# the rendered manifests are identical either way.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fastapi-app-local
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Alagani/argocd_repository.git
+    targetRevision: main
+    path: apps/fastapi-app/overlays/local
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

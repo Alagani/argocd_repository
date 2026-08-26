@@ -24,3 +24,16 @@ patches:
       - op: add
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+  # NodePort so the app is reachable at localhost:8080 via kind-config.yaml's
+  # extraPortMappings, without needing kubectl port-forward. nodePort 30080
+  # must match that mapping's containerPort.
+  - target:
+      kind: Service
+      name: fastapi-app
+    patch: |-
+      - op: add
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30080

@@ -21,6 +21,18 @@ kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
+# NodePort the https port (argocd-server serves both plaintext-detecting-TLS
+# on the same containerPort 8080 internally) so the UI is reachable at
+# <server-ip>:30443 with no LoadBalancer/Ingress controller provisioned.
+# install.yaml's Service ships without a `type` field (defaults to
+# ClusterIP) and isn't part of our kustomize overlays — it's applied
+# straight from upstream above, so this is a one-off patch, not a
+# kustomize patch.
+kubectl -n argocd patch svc argocd-server --type=json -p='[
+  {"op":"add","path":"/spec/type","value":"NodePort"},
+  {"op":"add","path":"/spec/ports/1/nodePort","value":30443}
+]'
+
 # No imagePullSecret step here as long as the Docker Hub repo stays public
 # — k3s's containerd pulls it anonymously. If you make the repo private,
 # create a docker-registry Secret in the `demo` namespace and reference it
@@ -30,11 +42,17 @@ kubectl apply -f ../argocd/application.yaml
 
 cat <<'EOF'
 
-ArgoCD is installed and the fastapi-app Application is applied. Useful next
-steps:
-  kubectl -n argocd port-forward svc/argocd-server 8081:443
-    -> https://localhost:8081 (user: admin, password: see below)
+ArgoCD is installed and the fastapi-app Application is applied. Both
+services are NodePort'd (no LoadBalancer/Ingress provisioned in this demo)
+- reach them at your k3s server's IP, not localhost:
+  https://<server-ip>:30443  -> ArgoCD UI (user: admin, password: see below)
+  http://<server-ip>:30080/healthz -> fastapi-app (once it's synced/healthy)
+
   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+
+(kubectl port-forward still works too, from a machine with KUBECONFIG set:
+  kubectl -n argocd port-forward svc/argocd-server 8081:443
+)
 
 fastapi-app won't go healthy until:
   - apps/fastapi-app/overlays/prod/kustomization.yaml's `images.newName` /

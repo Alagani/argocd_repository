@@ -22,6 +22,18 @@ kubectl create namespace argocd
 kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
+# NodePort the https port (argocd-server serves both plaintext-detecting-TLS
+# on the same containerPort 8080 internally) so the UI is reachable at
+# localhost:8443 via kind-config.yaml's extraPortMappings, no port-forward
+# needed. install.yaml's Service ships without a `type` field (defaults to
+# ClusterIP) and isn't part of our kustomize overlays — it's applied
+# straight from upstream above, so this is a one-off patch, not a
+# kustomize patch.
+kubectl -n argocd patch svc argocd-server --type=json -p='[
+  {"op":"add","path":"/spec/type","value":"NodePort"},
+  {"op":"add","path":"/spec/ports/1/nodePort","value":30443}
+]'
+
 # ArgoCD here demos the tool itself but is deliberately NOT pointed at
 # argocd/application.yaml: that Application targets a Docker Hub image —
 # resolvable from kind's nodes, but pulling the demo's own overlay isn't
@@ -36,12 +48,18 @@ kubectl apply -k ../apps/fastapi-app/overlays/local
 
 cat <<'EOF'
 
-Cluster is up. Useful next steps:
-  kubectl -n argocd port-forward svc/argocd-server 8081:443
-    -> https://localhost:8081 (user: admin, password: see below)
+Cluster is up. Both services are NodePort'd via kind-config.yaml's
+extraPortMappings — no port-forward needed:
+  https://localhost:8443  -> ArgoCD UI (user: admin, password: see below)
+  http://localhost:8080/healthz -> fastapi-app
+
   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+
+(kubectl port-forward still works as a fallback if you change the
+NodePort/extraPortMappings pairing later:
+  kubectl -n argocd port-forward svc/argocd-server 8081:443
   kubectl -n demo port-forward svc/fastapi-app 8000:80
-    -> http://localhost:8000/healthz
+)
 
 To exercise the real ArgoCD-managed path (prod on k3s/Docker Hub), see
 ../remote instead — this kind cluster never touches that setup.

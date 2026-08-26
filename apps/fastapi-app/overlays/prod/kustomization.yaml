@@ -18,3 +18,16 @@ images:
 replicas:
   - name: fastapi-app
     count: 2
+patches:
+  # NodePort so the app is reachable at <k3s-server-ip>:30080 without a
+  # LoadBalancer/Ingress controller (none provisioned in this demo).
+  - target:
+      kind: Service
+      name: fastapi-app
+    patch: |-
+      - op: add
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30080
