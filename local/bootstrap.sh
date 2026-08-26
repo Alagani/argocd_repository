@@ -15,7 +15,11 @@ APP_REPO_PATH="${APP_REPO_PATH:-../../fastapi-app}"
 kind create cluster --config kind-config.yaml
 
 kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+# --server-side avoids kubectl's client-side apply embedding the full
+# manifest into a last-applied-configuration annotation — ArgoCD's
+# applicationsets.argoproj.io CRD is large enough that this trips
+# Kubernetes' 262144-byte total-annotation-size limit on plain `apply`.
+kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
 # ArgoCD here demos the tool itself but is deliberately NOT pointed at

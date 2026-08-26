@@ -14,7 +14,11 @@ kubectl cluster-info >/dev/null || {
 }
 
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+# --server-side avoids kubectl's client-side apply embedding the full
+# manifest into a last-applied-configuration annotation — ArgoCD's
+# applicationsets.argoproj.io CRD is large enough that this trips
+# Kubernetes' 262144-byte total-annotation-size limit on plain `apply`.
+kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
 # No imagePullSecret step here as long as the Docker Hub repo stays public
