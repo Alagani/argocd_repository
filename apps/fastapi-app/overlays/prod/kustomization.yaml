@@ -14,7 +14,7 @@ images:
   # change, applying it, keeping it applied) is ArgoCD.
   - name: fastapi-app
     newName: docker.io/jaga9989/myapp-repo
-    newTag: b4e5a33c0457ac837167d779a0617d4c378b2a8f
+    newTag: 58f45de8be0cc645946b4bcda7adfacfa76b3bde
 replicas:
   - name: fastapi-app
     count: 2
